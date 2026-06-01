@@ -41,5 +41,81 @@ const validate = (fields) => {
 };
 
 // BEGIN
+export default () => {
+  const state = onChange({
+    form: {
+      name: '',
+      email: '',
+      password: '',
+      passwordConfirmation: '',
+    },
+    errors: {},
+    processState: 'filling',
+  }, () => {
+    const form = document.querySelector('[data-form="sign-up"]');
 
+    if (!form) {
+      return;
+    }
+
+    Object.keys(state.form).forEach((name) => {
+      const input = form.elements[name];
+
+      input.classList.remove('is-invalid');
+
+      const next = input.nextElementSibling;
+      if (next && next.classList.contains('invalid-feedback')) {
+        next.remove();
+      }
+
+      if (has(state.errors, name)) {
+        input.classList.add('is-invalid');
+
+        const div = document.createElement('div');
+        div.classList.add('invalid-feedback');
+        div.textContent = state.errors[name].message;
+
+        input.after(div);
+      }
+    });
+
+    const submit = form.querySelector('[type="submit"]');
+
+    if (state.processState === 'sending') {
+      submit.disabled = true;
+      return;
+    }
+
+    submit.disabled = !isEmpty(state.errors);
+  });
+
+  const form = document.querySelector('[data-form="sign-up"]');
+
+  form.addEventListener('input', (e) => {
+    state.form[e.target.name] = e.target.value;
+    state.errors = validate(state.form);
+  });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    state.errors = validate(state.form);
+
+    if (!isEmpty(state.errors)) {
+      return;
+    }
+
+    state.processState = 'sending';
+
+    try {
+      await axios.post(routes.usersPath(), state.form);
+
+      const container = document.querySelector('[data-container="sign-up"]');
+      container.textContent = 'User Created!';
+    } catch (err) {
+      state.processState = 'filling';
+    }
+  });
+
+};
 // END
